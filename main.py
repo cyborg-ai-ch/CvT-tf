@@ -1,7 +1,7 @@
 from tensorflow.keras.models import Model
 from numpy import expand_dims, squeeze
 import matplotlib.pyplot as plt
-from models.AutoEncoder import AutoEncoder
+from models.Transformer import VisionTransformer
 from dataloader.DataLoader import DataLoader
 from utils.KeyEvent import init_key_event
 from utils.Weights import load_weights, save_weights
@@ -28,7 +28,7 @@ def wait_on_plot(figures: List[plt.Figure]):
 
 def run(loader: DataLoader, batch_size=256, epochs=10):
 
-    model = AutoEncoder()
+    model = VisionTransformer()
     dataset = loader.load_images(batch_size=batch_size)
 
     plt.ion()
