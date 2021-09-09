@@ -1,24 +1,125 @@
-from numpy import stack, ndarray
+from numpy import stack, ndarray, asarray
 from numpy.random import randint
 from tensorflow.keras.datasets import cifar100
+from tensorflow_datasets import load
 from tensorflow.python import data
-from typing import Tuple, Iterable
+from PIL import Image
+from typing import Tuple, Iterable, Generator, List
 
 
 class DataLoader:
 
-    def __init__(self):
-        (self.train_x, self.train_y), (self.test_x, self.test_y) = cifar100.load_data()
+    def load_images(self):
+        raise NotImplementedError
 
-    def load_images(self, batch_size=125, test=False) -> data.Dataset:
-        x = data.Dataset.from_tensor_slices(self.train_x)
-        y = data.Dataset.from_tensor_slices(self.train_y)
+    def get_random_test_images(self, number_of_images) -> Iterable[Tuple[ndarray]]:
+        raise NotImplementedError
+
+    def batch_generator(self, batch_size=128, split="train") -> Generator[Iterable[Tuple[ndarray]], None, None]:
+        raise NotImplementedError
+
+    @property
+    def image_size(self) -> List[int]:
+        return [0, 0, 0]
+
+    @property
+    def num_classes(self):
+        return 0
+
+
+class DataLoaderImageNet(DataLoader):
+
+    def __init__(self):
+        self.image_net = {}
+        self.image_net["train"], image_net_info = load("ImagenetV2", with_info=True)
+        self.image_net["test"], image_net_info = load("ImagenetV2", split="test", with_info=True)
+
+    def load_images(self, batch_size=125) -> data.Dataset:
+        x, y = self._load_images(split="train")
+        x = data.Dataset.from_tensor_slices(x)
+        y = data.Dataset.from_tensor_slices(y)
         return data.Dataset.zip((x, y)).batch(batch_size)
 
     def get_random_test_image(self) -> Tuple[ndarray, ndarray]:
-        index = randint(0, len(self.test_x))
-        return self.test_x[index], self.test_y[index]
+        test_x, test_y = self._load_images(split="test")
+        index = randint(0, len(test_x))
+        return test_x[index], test_y[index]
 
-    def get_random_test_images(self, number_of_images) -> Iterable[Tuple[ndarray, ndarray]]:
+    def _load_images(self, split="train"):
+        return self._numpyfy(self.image_net[split], 1000)
+
+    @staticmethod
+    def _numpyfy(dataset, max_size=-1):
+        x = []
+        y = []
+        for element in dataset.take(max_size):
+            i = element["image"].numpy()
+            i = Image.fromarray(i)
+            i = i.resize((224, 224))
+            x.append(asarray(i))
+            y.append(element["label"].numpy())
+        x = stack(x)
+        y = stack(y)
+        return x / 255., y
+
+    def get_random_test_images(self, number_of_images) -> Iterable[Tuple[ndarray]]:
         for i in range(number_of_images):
             yield self.get_random_test_image()
+
+    def batch_generator(self, batch_size=128, split="train") -> Generator[Iterable[Tuple[ndarray]], None, None]:
+        size = self.image_net[split].cardinality().numpy()
+
+        def generator(ds):
+            index = 0
+            while index < size:
+                ds.skip(index)
+                index += batch_size
+                if index >= batch_size:
+                    ds.shuffle(2*batch_size)
+                yield ds.take(batch_size)
+
+        for window in generator(self.image_net[split]):
+            yield self._numpyfy(window)
+
+    @property
+    def image_size(self) -> List[int]:
+        return [224, 224, 3]
+
+    @property
+    def num_classes(self):
+        return 1000
+
+
+class DataLoaderCifar(DataLoader):
+
+    def __init__(self):
+        (self.x, self.y), (self.x_test, self.y_test) = cifar100.load_data()
+
+    def load_images(self, split="train"):
+        _ = self.x if split == "train" else self.x_test
+        x = data.Dataset.from_tensor_slices(_/255.0)
+        _ = self.y if split == "train" else self.y_test
+        y = data.Dataset.from_tensor_slices(_)
+        return data.Dataset.zip((x, y))
+
+    def get_random_test_image(self) -> Tuple[ndarray]:
+        index = randint(0, len(self.x_test))
+        return self.x_test[index]/255.0, self.y_test[index]
+
+    def get_random_test_images(self, number_of_images) -> Iterable[Tuple[ndarray]]:
+        return [self.get_random_test_image() for i in range(number_of_images)]
+
+    def batch_generator(self, batch_size=128, split="train") -> Generator[Iterable[Tuple[ndarray]], None, None]:
+        ds = self.load_images(split=split)
+        ds = ds.batch(batch_size)
+        for batch in ds:
+            yield batch
+
+    @property
+    def image_size(self) -> List[int]:
+        return [32, 32, 3]
+
+    @property
+    def num_classes(self):
+        return 100
+

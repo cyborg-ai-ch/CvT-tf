@@ -1,11 +1,12 @@
 from tensorflow.keras.models import Model
-from numpy import expand_dims, squeeze
+from numpy import expand_dims, squeeze, argmax, zeros, isnan
 import matplotlib.pyplot as plt
-from models.Transformer import VisionTransformer
-from dataloader.DataLoader import DataLoader
+from models.cvt import ConvolutionalVisionTransformer
+from dataloader.DataLoader import DataLoader, DataLoaderCifar
 from utils.KeyEvent import init_key_event
 from utils.Weights import load_weights, save_weights
 from typing import List
+from config.config import SPEC
 
 
 def wait_on_plot(figures: List[plt.Figure]):
@@ -26,12 +27,12 @@ def wait_on_plot(figures: List[plt.Figure]):
             plt.ion()
 
 
-def run(loader: DataLoader, batch_size=256, epochs=10):
+def run(loader: DataLoader, batch_size=256, epochs=10, spec=SPEC):
+    model = ConvolutionalVisionTransformer(spec=spec, num_classes=loader.num_classes)
+    model(zeros([1] + loader.image_size))
+    model.summary()
+    # dataset = loader.load_images(batch_size=batch_size)
 
-    model = VisionTransformer()
-    dataset = loader.load_images(batch_size=batch_size)
-
-    plt.ion()
     fig: plt.Figure = plt.figure()
     ax: plt.Axes = fig.add_subplot(111)
     y_loss = [0]
@@ -52,7 +53,7 @@ def run(loader: DataLoader, batch_size=256, epochs=10):
     init_key_event("q", False, fig, stop_training)
 
     for epoch in range(epochs):
-        for data in dataset:
+        for data in loader.batch_generator(batch_size, "train"):
             index += 1
             x.append(index)
             losses = model.train_step(data)
@@ -67,24 +68,40 @@ def run(loader: DataLoader, batch_size=256, epochs=10):
             fig.canvas.flush_events()
             print("loss {:.3E}"
                   .format(loss))
-            if stop[0]:
+            if stop[0] or isnan(loss):
+                if isnan(loss):
+                    stop[0] = True
                 break
         if stop[0]:
             break
         ax.plot([index, index], [0, 100], "k--")
-        dataset = dataset.shuffle(batch_size)
     return model, fig
 
 
-def test_reconstruction(model: Model, loader: DataLoader):
-    for x in loader.get_random_test_images(10):
-        fig1 = plt.figure()
-        plt.imshow(x)
+def test(model: Model, loader: DataLoader, number_of_images=100):
+    labels_true = []
+    labels = []
+    count = 0
+    for x, y_true in loader.get_random_test_images(number_of_images):
+        # fig1 = plt.figure()
+        # plt.imshow(x)
         x = expand_dims(x, axis=0)
-        y = model(x)
-        fig2 = plt.figure()
-        plt.imshow(squeeze(y.numpy()))
-        wait_on_plot([fig1, fig2])
+        y = model(x).numpy()
+        cat_predict = int(squeeze(argmax(y)))
+        cat_true = int(y_true)
+        match = cat_predict == cat_true
+        if match:
+            count += 1
+        labels.append(cat_predict)
+        labels_true.append(cat_true)
+        # fig2 = plt.figure()
+        # plt.plot(range(len(y_true), y_true), "bo")
+        # wait_on_plot([fig1, fig2])
+    plt.figure()
+    plt.plot(range(len(labels)), labels_true, "bo")
+    plt.plot(range(len(labels)), labels, "go")
+    plt.title('match: ' + str(count) + ' cat: ' + str(number_of_images) + ' yield: ' + str(count/number_of_images))
+    plt.show()
 
 
 if __name__ == '__main__':
@@ -92,13 +109,15 @@ if __name__ == '__main__':
     from matplotlib import rcsetup
     from os.path import isfile
 
-    loader = DataLoader("data")
+    plt.ion()
+
+    loader = DataLoaderCifar()
     rcsetup.validate_backend("TkAgg")
     if isfile("weights/weights.npy"):
-        model = AutoEncoder()
-        load_weights(model, "weights")
+        model = ConvolutionalVisionTransformer(spec=SPEC, num_classes=loader.num_classes)
+        load_weights(model, "weights", input_shape=[1] + loader.image_size)
     else:
-        model, figure = run(loader, epochs=20, batch_size=125)
+        model, figure = run(loader, epochs=100, batch_size=128)
         save_weights(model, "weights")
         wait_on_plot([figure])
-    test_reconstruction(model, loader)
+    test(model, loader)
