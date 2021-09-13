@@ -1,5 +1,5 @@
-from numpy import stack, ndarray, asarray
-from numpy.random import randint
+from numpy import stack, ndarray, asarray, arange
+from numpy.random import randint, shuffle
 from tensorflow.keras.datasets import cifar100
 from tensorflow_datasets import load
 from tensorflow.python import data
@@ -96,10 +96,14 @@ class DataLoaderCifar(DataLoader):
         (self.x, self.y), (self.x_test, self.y_test) = cifar100.load_data()
 
     def load_images(self, split="train"):
-        _ = self.x if split == "train" else self.x_test
-        x = data.Dataset.from_tensor_slices(_/255.0)
-        _ = self.y if split == "train" else self.y_test
-        y = data.Dataset.from_tensor_slices(_)
+        if split == "train":
+            shuffled_indices = arange(0, len(self.y))
+            shuffle(shuffled_indices)
+            x = data.Dataset.from_tensor_slices(self.x[shuffled_indices]/255.0)
+            y = data.Dataset.from_tensor_slices(self.y[shuffled_indices])
+        else:
+            x = data.Dataset.from_tensor_slices(self.x_test/255.0)
+            y = data.Dataset.from_tensor_slices(self.y_test)
         return data.Dataset.zip((x, y))
 
     def get_random_test_image(self) -> Tuple[ndarray]:

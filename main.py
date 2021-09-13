@@ -28,7 +28,7 @@ def wait_on_plot(figures: List[plt.Figure]):
 
 
 def run(loader: DataLoader, batch_size=256, epochs=10, spec=SPEC):
-    model = ConvolutionalVisionTransformer(spec=spec, num_classes=loader.num_classes)
+    model = ConvolutionalVisionTransformer(spec=spec)
     model(zeros([1] + loader.image_size))
     model.summary()
     # dataset = loader.load_images(batch_size=batch_size)
@@ -78,13 +78,12 @@ def run(loader: DataLoader, batch_size=256, epochs=10, spec=SPEC):
     return model, fig
 
 
-def test(model: Model, loader: DataLoader, number_of_images=100):
+def test(model: Model, loader: DataLoader, number_of_images=1000):
     labels_true = []
     labels = []
     count = 0
-    for x, y_true in loader.get_random_test_images(number_of_images):
-        # fig1 = plt.figure()
-        # plt.imshow(x)
+    test_images = number_of_images
+    for x, y_true in loader.get_random_test_images(test_images):
         x = expand_dims(x, axis=0)
         y = model(x).numpy()
         cat_predict = int(squeeze(argmax(y)))
@@ -94,13 +93,10 @@ def test(model: Model, loader: DataLoader, number_of_images=100):
             count += 1
         labels.append(cat_predict)
         labels_true.append(cat_true)
-        # fig2 = plt.figure()
-        # plt.plot(range(len(y_true), y_true), "bo")
-        # wait_on_plot([fig1, fig2])
     plt.figure()
     plt.plot(range(len(labels)), labels_true, "bo")
     plt.plot(range(len(labels)), labels, "go")
-    plt.title('match: ' + str(count) + ' cat: ' + str(number_of_images) + ' yield: ' + str(count/number_of_images))
+    plt.title('match: ' + str(count) + ' cat: ' + str(test_images) + ' yield: ' + str(count/test_images))
     plt.show()
 
 
@@ -114,10 +110,10 @@ if __name__ == '__main__':
     loader = DataLoaderCifar()
     rcsetup.validate_backend("TkAgg")
     if isfile("weights/weights.npy"):
-        model = ConvolutionalVisionTransformer(spec=SPEC, num_classes=loader.num_classes)
+        model = ConvolutionalVisionTransformer(spec=SPEC)
         load_weights(model, "weights", input_shape=[1] + loader.image_size)
     else:
-        model, figure = run(loader, epochs=100, batch_size=128)
+        model, figure = run(loader, epochs=100, batch_size=512)
         save_weights(model, "weights")
         wait_on_plot([figure])
-    test(model, loader)
+    test(model, loader, number_of_images=1000)
