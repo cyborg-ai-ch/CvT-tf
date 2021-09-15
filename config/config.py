@@ -1,31 +1,47 @@
 
 SPEC = {
-    "NUM_STAGES": 3,
-    "PATCH_SIZE": [7, 3, 3],
-    # "PATCH_SIZE": [17, 3, 3],
-    "PATCH_STRIDE": [4, 2, 2],
-    # "PATCH_STRIDE": [8, 2, 2],
-    "PATCH_PADDING": [2, 1, 1],
-    # "DIM_EMBED": [64, 128, 64],
-    "DIM_EMBED": [8, 24, 48],
-    # "DIM_EMBED": [32,  , 384],
-    "NUM_HEADS": [2, 5, 7],
-    # "NUM_HEADS": [1, 4, 6],
-    # "DEPTH": [1, 2, 10],
-    "DEPTH": [3, 3, 7],
-    # "MLP_RATIO": [4.0, 4.0, 4.0],
-    "MLP_RATIO": [4.0, 4.0, 4.0],
-    "ATTN_DROP_RATE": [0.0, 0.0, 0.0],
-    "DROP_RATE": [0.0, 0.1, 0.0],
-    "DROP_PATH_RATE": [0.0, 0.0, 0.1],
-    "QKV_BIAS": [True, True, True],
-    "CLS_TOKEN": [False, True, True],
-    "POS_EMBED": [False, False, False],
-    "QKV_PROJ_METHOD": ['dw_bn', 'dw_bn', 'dw_bn'],
-    # "QKV_PROJ_METHOD": ['avg', 'avg', 'avg'],
-    "KERNEL_QKV": [3, 3, 3],
-    "PADDING_KV": ["same", "same", "same"],
-    "STRIDE_KV": [2, 2, 2],
-    "PADDING_Q": ["same", "same", "same"],
-    "STRIDE_Q": [1, 1, 1],
+    #  MODEL OPTIONS
+    "NUM_STAGES": 3,  # Number of Vision Transformer Stages, note that the length of
+                      # EMBEDDING, STAGE and ATTENTION OPTIONS must be equal to NUM_STAGES.
+
+    "CLS_TOKEN": True,  # True if the model should use the Class token output for the classification, otherwise a
+                        # max pooling layer (over all transformer block output patches) is used.
+
+
+    #  EMBEDDING OPTIONS
+    "PATCH_SIZE": [7, 3, 3],  # Kernel size of the embedding convolution.
+
+    "PATCH_STRIDE": [4, 2, 2],  # Stride of the embedding convolution.
+                                # (rule of thumb stride == kernel_size // 2 + kernel_size%2)
+
+    "PATCH_PADDING": ["valid", "same", "same"],  # Padding of the embedding convolution.
+                                                 # 'same' generates a padding,
+                                                 # whereas 'valid' decreases the height and width.
+
+    "DIM_EMBED": [16, 48, 96],  # the dimension of the embedded image patches.
+
+
+    # STAGE OPTIONS
+    "DEPTH": [3, 3, 7],  # Number of 'Transformer blocks' per Stage.
+
+    "DROP_RATE": [0.1, 0.0, 0.0],  # Probability to drop a 'pixel'.
+
+    "DROP_PATCH_RATE": [0.01, 0.0, 0.1],  # Probability to drop a patch.
+
+    # ATTENTION OPTIONS
+    "NUM_HEADS": [2, 5, 7],  # Number of heads of the multi head attention.
+
+    "QKV_BIAS": [True, True, True],  # True if the attention should use a bias.
+
+    "PADDING_KV": ["same", "same", "same"],  # padding of the k and v convolutional projections.
+
+    "STRIDE_KV": [2, 2, 2],  # stride of the kv convolutional projection.
+
+    "PADDING_Q": ["same", "same", "same"],  # padding of the q convolutional projection.
+
+    "STRIDE_Q": [1, 1, 1],  # stride of the q convolutional projection.
+
+    "MLP_RATIO": [4.0, 4.0, 4.0],  # ratio between hidden units and input units in the Multi Layer Perceptron.
+                                   # e.g ratio == 4 means there are four times more hidden units than input units.
 }
+

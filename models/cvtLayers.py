@@ -1,7 +1,7 @@
 from tensorflow.keras.layers import Layer, Dense, Conv2D, Dropout, MultiHeadAttention, AveragePooling2D, \
     BatchNormalization
 from tensorflow.keras.models import Sequential
-from tensorflow import Tensor, divide, concat, random, split, reshape, transpose
+from tensorflow import Tensor, divide, concat, random, split, reshape, transpose, float32
 from typing import List, Union, Iterable
 
 
@@ -47,10 +47,10 @@ class Rearrange(Layer):
         return _new_shape
 
 
-class DropPath(Layer):
+class DropPatch(Layer):
 
     def __init__(self, drop_probability=0.0):
-        super(DropPath, self).__init__()
+        super(DropPatch, self).__init__()
         assert 0.0 < drop_probability < 1.0
         self.drop_probability = drop_probability
 
@@ -60,7 +60,7 @@ class DropPath(Layer):
         else:
             keep_probability = 1 - self.drop_probability
             b, hw, c = x.shape
-            random_tensor = random.uniform((b, 1, c)) + keep_probability
+            random_tensor = random.uniform((b, hw, 1), minval=0.0, maxval=1.0, dtype=float32) + keep_probability
             random_tensor = random_tensor // 1.0
             return divide(x, keep_probability) * random_tensor
 
@@ -71,10 +71,10 @@ class ConvEmbed(Layer):
     The number of patches is represented by (image height)*(image width) // stride**2
     """
     def __init__(self,
+                 patch_padding="same",
                  patch_size=7,
                  embed_dim=64,
                  stride=4,
-                 padding="same",
                  norm_layer=None):
         super().__init__()
         self.patch_size = patch_size if not isinstance(patch_size, int) else (patch_size, patch_size)
@@ -82,7 +82,7 @@ class ConvEmbed(Layer):
             embed_dim,   # number of filters/channels
             patch_size,  # kernel size == patch size
             strides=stride,
-            padding=padding
+            padding=patch_padding
         )
         self.norm = norm_layer(axis=-1) if norm_layer else None
 
@@ -101,9 +101,10 @@ class Attention(Layer):
                  dim_out,
                  num_heads,
                  proj_drop=0.,
-                 method='dw_bn',
                  kernel_size=3,
                  stride_kv=1,
+                 padding_kv="same",
+                 padding_q="same",
                  attention_bias=True,
                  stride_q=1,
                  with_cls_token=False):
@@ -115,34 +116,21 @@ class Attention(Layer):
         self.scale = dim_out ** -0.5
         self.with_cls_token = with_cls_token
 
-        self.conv_proj_q = self._build_projection(dim_in, dim_out, kernel_size, stride_q, method)
-        self.conv_proj_k = self._build_projection(dim_in, dim_out, kernel_size, stride_kv, method)
-        self.conv_proj_v = self._build_projection(dim_in, dim_out, kernel_size, stride_kv, method)
+        self.conv_proj_q = self._build_projection(dim_in, kernel_size, stride_q, padding_q)
+        self.conv_proj_k = self._build_projection(dim_in, kernel_size, stride_kv, padding_kv)
+        self.conv_proj_v = self._build_projection(dim_in, kernel_size, stride_kv, padding_kv)
 
         self.attention = MultiHeadAttention(self.num_heads, dim_out, use_bias=attention_bias)
         self.proj_drop = Dropout(proj_drop)
 
     @staticmethod
-    def _build_projection(dim_in,
-                          dim_out,
-                          kernel_size,
-                          stride,
-                          method):
-        if method == 'dw_bn':
-            proj = Sequential([
-                Conv2D(dim_out, kernel_size, padding="same", strides=stride, use_bias=False, groups=dim_in),
-                BatchNormalization(),
-                #  'b h w c -> b (h w) c '
-                Rearrange(None, ["0", ["1", "2"], "3"])
-            ])
-        elif method == 'avg':
-            proj = Sequential([
-                AveragePooling2D(pool_size=kernel_size, padding="same", strides=stride),
-                #  'b h w c -> b (h w) c'
-                Rearrange(None, ["0", ["1", "2"], "3"])
-            ])
-        else:
-            proj = Rearrange(None, ["0", ["1", "2"], "3"])
+    def _build_projection(filters, kernel_size, stride, padding):
+        proj = Sequential([
+            Conv2D(filters, kernel_size, padding=padding, strides=stride, use_bias=False),
+            BatchNormalization(),
+            #  'b h w c -> b (h w) c '
+            Rearrange(None, ["0", ["1", "2"], "3"])
+        ])
         return proj
 
     def call_conv(self, x, h, w):
@@ -177,22 +165,23 @@ class Mlp(Layer):
                  in_features,
                  hidden_features=None,
                  out_features=None,
-                 act_layer="gelu",
+                 act_layer="relu",
                  drop=0.0):
         super(Mlp, self).__init__()
         out_features = out_features or in_features
         hidden_features = hidden_features or in_features
         self.fc1 = Dense(hidden_features, activation=act_layer)
-        self.fc2 = Dense(out_features)  # TODO: no activation function, should there be one??
-        self.drop = Dropout(drop)
+        self.fc2 = Dense(out_features)
+        self.drop1 = Dropout(drop)
+        self.drop2 = Dropout(drop)
 
     def call(self, x, mask=None, training=True):
         x = self.fc1(x)
         if training:
-            x = self.drop(x)
+            x = self.drop1(x)
         x = self.fc2(x)
         if training:
-            x = self.drop(x)
+            x = self.drop2(x)
         return x
 
 

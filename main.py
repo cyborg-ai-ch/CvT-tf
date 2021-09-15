@@ -27,9 +27,12 @@ def wait_on_plot(figures: List[plt.Figure]):
             plt.ion()
 
 
-def run(loader: DataLoader, batch_size=256, epochs=10, spec=SPEC):
-    model = ConvolutionalVisionTransformer(spec=spec)
-    model(zeros([1] + loader.image_size))
+def run(loader: DataLoader, batch_size=256, epochs=10, spec=SPEC, start_weights=None, learning_rate=5e-4):
+    model = ConvolutionalVisionTransformer(spec=spec, learning_rate=learning_rate)
+    if start_weights is None:
+        model(zeros([1] + loader.image_size))
+    else:
+        load_weights(model, start_weights, [1] + loader.image_size)
     model.summary()
     # dataset = loader.load_images(batch_size=batch_size)
 
@@ -38,6 +41,7 @@ def run(loader: DataLoader, batch_size=256, epochs=10, spec=SPEC):
     y_loss = [0]
     x = [0]
     plot_loss: plt.Line2D = ax.plot(x, y_loss, "ro", label="loss")[0]
+    ax.grid(True)
     fig.show()
 
     index = 0
@@ -74,7 +78,7 @@ def run(loader: DataLoader, batch_size=256, epochs=10, spec=SPEC):
                 break
         if stop[0]:
             break
-        ax.plot([index, index], [0, 100], "k--")
+        # ax.plot([index, index], [0, 100], "k--")
     return model, fig
 
 
@@ -83,7 +87,7 @@ def test(model: Model, loader: DataLoader, number_of_images=1000):
     labels = []
     count = 0
     test_images = number_of_images
-    for x, y_true in loader.get_random_test_images(test_images):
+    for x, y_true in loader.get_random_test_images(test_images, split="train"):
         x = expand_dims(x, axis=0)
         y = model(x).numpy()
         cat_predict = int(squeeze(argmax(y)))
@@ -93,11 +97,12 @@ def test(model: Model, loader: DataLoader, number_of_images=1000):
             count += 1
         labels.append(cat_predict)
         labels_true.append(cat_true)
-    plt.figure()
+    fig = plt.figure()
     plt.plot(range(len(labels)), labels_true, "bo")
     plt.plot(range(len(labels)), labels, "go")
     plt.title('match: ' + str(count) + ' cat: ' + str(test_images) + ' yield: ' + str(count/test_images))
     plt.show()
+    return fig
 
 
 if __name__ == '__main__':
@@ -113,7 +118,8 @@ if __name__ == '__main__':
         model = ConvolutionalVisionTransformer(spec=SPEC)
         load_weights(model, "weights", input_shape=[1] + loader.image_size)
     else:
-        model, figure = run(loader, epochs=100, batch_size=512)
+        model, figure = run(loader, epochs=1000, batch_size=1536, start_weights="weights_pretrained", learning_rate=5e-5)
         save_weights(model, "weights")
         wait_on_plot([figure])
-    test(model, loader, number_of_images=1000)
+    figure = test(model, loader, number_of_images=100)
+    wait_on_plot([figure])

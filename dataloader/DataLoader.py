@@ -106,12 +106,13 @@ class DataLoaderCifar(DataLoader):
             y = data.Dataset.from_tensor_slices(self.y_test)
         return data.Dataset.zip((x, y))
 
-    def get_random_test_image(self) -> Tuple[ndarray]:
-        index = randint(0, len(self.x_test))
-        return self.x_test[index]/255.0, self.y_test[index]
+    def get_random_test_image(self, split="test") -> Tuple[ndarray]:
+        [x, y] = [self.x_test, self.y_test] if split == "test" else [self.x, self.y]
+        index = randint(0, len(x))
+        return x[index]/255.0, y[index]
 
-    def get_random_test_images(self, number_of_images) -> Iterable[Tuple[ndarray]]:
-        return [self.get_random_test_image() for i in range(number_of_images)]
+    def get_random_test_images(self, number_of_images, split="test") -> Iterable[Tuple[ndarray]]:
+        return [self.get_random_test_image(split=split) for i in range(number_of_images)]
 
     def batch_generator(self, batch_size=128, split="train") -> Generator[Iterable[Tuple[ndarray]], None, None]:
         ds = self.load_images(split=split)
