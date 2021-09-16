@@ -87,7 +87,7 @@ def test(model: Model, loader: DataLoader, number_of_images=1000):
     labels = []
     count = 0
     test_images = number_of_images
-    for x, y_true in loader.get_random_test_images(test_images, split="train"):
+    for x, y_true in loader.get_random_test_images(test_images, split="test"):
         x = expand_dims(x, axis=0)
         y = model(x).numpy()
         cat_predict = int(squeeze(argmax(y)))

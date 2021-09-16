@@ -12,7 +12,7 @@ class DataLoader:
     def load_images(self):
         raise NotImplementedError
 
-    def get_random_test_images(self, number_of_images) -> Iterable[Tuple[ndarray]]:
+    def get_random_test_images(self, number_of_images, split="test") -> Iterable[Tuple[ndarray]]:
         raise NotImplementedError
 
     def batch_generator(self, batch_size=128, split="train") -> Generator[Iterable[Tuple[ndarray]], None, None]:
@@ -62,7 +62,7 @@ class DataLoaderImageNet(DataLoader):
         y = stack(y)
         return x / 255., y
 
-    def get_random_test_images(self, number_of_images) -> Iterable[Tuple[ndarray]]:
+    def get_random_test_images(self, number_of_images, split="test") -> Iterable[Tuple[ndarray]]:
         for i in range(number_of_images):
             yield self.get_random_test_image()
 
