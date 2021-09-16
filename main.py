@@ -1,4 +1,5 @@
 from tensorflow.keras.models import Model
+from tensorflow import one_hot
 from numpy import expand_dims, squeeze, argmax, zeros, isnan
 import matplotlib.pyplot as plt
 from models.cvt import ConvolutionalVisionTransformer
@@ -27,8 +28,8 @@ def wait_on_plot(figures: List[plt.Figure]):
             plt.ion()
 
 
-def run(loader: DataLoader, batch_size=256, epochs=10, spec=SPEC, start_weights=None, learning_rate=5e-4):
-    model = ConvolutionalVisionTransformer(spec=spec, learning_rate=learning_rate)
+def train(loader: DataLoader, batch_size=512, epochs=10, spec=SPEC, start_weights=None, learning_rate=5e-4):
+    model = ConvolutionalVisionTransformer(spec=spec, learning_rate=learning_rate, num_classes=loader.num_classes)
     if start_weights is None:
         model(zeros([1] + loader.image_size))
     else:
@@ -39,8 +40,10 @@ def run(loader: DataLoader, batch_size=256, epochs=10, spec=SPEC, start_weights=
     fig: plt.Figure = plt.figure()
     ax: plt.Axes = fig.add_subplot(111)
     y_loss = [0]
+    y_val_loss = [0]
     x = [0]
     plot_loss: plt.Line2D = ax.plot(x, y_loss, "ro", label="loss")[0]
+    plot_val_loss: plt.Line2D = ax.plot(x, y_val_loss, "go", label="val loss")[0]
     ax.grid(True)
     fig.show()
 
@@ -48,6 +51,7 @@ def run(loader: DataLoader, batch_size=256, epochs=10, spec=SPEC, start_weights=
     fig.legend()
     x = []
     y_loss = []
+    y_val_loss = []
 
     stop = [False]
 
@@ -61,10 +65,16 @@ def run(loader: DataLoader, batch_size=256, epochs=10, spec=SPEC, start_weights=
             index += 1
             x.append(index)
             losses = model.train_step(data)
+            val_x, val_y = loader.validation_set(size=128)
+            val_x = model(val_x)
+            val_loss = model.cvt_loss(val_x, val_y)
             loss = losses["loss"]
             y_loss.append(loss)
+            y_val_loss.append(float(val_loss.numpy()))
             plot_loss.set_xdata(x)
             plot_loss.set_ydata(y_loss)
+            plot_val_loss.set_xdata(x)
+            plot_val_loss.set_ydata(y_val_loss)
             ax.set_xlim(0, index + 1)
             maximum = max(y_loss[-(len(y_loss) // 3):])
             ax.set_ylim(0, maximum + maximum / 5.0)
@@ -78,16 +88,17 @@ def run(loader: DataLoader, batch_size=256, epochs=10, spec=SPEC, start_weights=
                 break
         if stop[0]:
             break
-        # ax.plot([index, index], [0, 100], "k--")
     return model, fig
 
 
-def test(model: Model, loader: DataLoader, number_of_images=1000):
+def test(model: Model, loader: DataLoader, number_of_images=1000, split="test"):
     labels_true = []
     labels = []
     count = 0
     test_images = number_of_images
-    for x, y_true in loader.get_random_test_images(test_images, split="test"):
+    for x, y_true in loader.get_random_test_images(test_images, split=split):
+        # plt.figure()
+        # plt.imshow(x)
         x = expand_dims(x, axis=0)
         y = model(x).numpy()
         cat_predict = int(squeeze(argmax(y)))
@@ -112,14 +123,14 @@ if __name__ == '__main__':
 
     plt.ion()
 
-    loader = DataLoaderCifar()
+    loader = DataLoaderCifar(image_size=[72, 72, 3])
     rcsetup.validate_backend("TkAgg")
     if isfile("weights/weights.npy"):
         model = ConvolutionalVisionTransformer(spec=SPEC)
         load_weights(model, "weights", input_shape=[1] + loader.image_size)
     else:
-        model, figure = run(loader, epochs=1000, batch_size=1536, start_weights="weights_pretrained", learning_rate=5e-5)
+        model, figure = train(loader, epochs=300, batch_size=512, start_weights="weights_pretrained", learning_rate=1e-3)
         save_weights(model, "weights")
         wait_on_plot([figure])
-    figure = test(model, loader, number_of_images=100)
+    figure = test(model, loader, number_of_images=100, split="test")
     wait_on_plot([figure])

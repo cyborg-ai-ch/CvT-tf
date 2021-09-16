@@ -18,18 +18,18 @@ SPEC = {
                                                  # 'same' generates a padding,
                                                  # whereas 'valid' decreases the height and width.
 
-    "DIM_EMBED": [16, 48, 96],  # the dimension of the embedded image patches.
+    "DIM_EMBED": [32, 64, 128],  # the dimension of the embedded image patches.
 
 
     # STAGE OPTIONS
-    "DEPTH": [3, 3, 7],  # Number of 'Transformer blocks' per Stage.
+    "DEPTH": [1, 2, 5],  # Number of 'Transformer blocks' per Stage.
 
-    "DROP_RATE": [0.1, 0.0, 0.0],  # Probability to drop a 'pixel'.
+    "DROP_RATE": [0.01, 0.0, 0.0],  # Probability to drop a 'pixel'.
 
-    "DROP_PATCH_RATE": [0.01, 0.0, 0.1],  # Probability to drop a patch.
+    "DROP_PATCH_RATE": [0.01, 0.0, 0.05],  # Probability to drop a patch.
 
     # ATTENTION OPTIONS
-    "NUM_HEADS": [2, 5, 7],  # Number of heads of the multi head attention.
+    "NUM_HEADS": [1, 4, 6],  # Number of heads of the multi head attention.
 
     "QKV_BIAS": [True, True, True],  # True if the attention should use a bias.
 
@@ -42,6 +42,6 @@ SPEC = {
     "STRIDE_Q": [1, 1, 1],  # stride of the q convolutional projection.
 
     "MLP_RATIO": [4.0, 4.0, 4.0],  # ratio between hidden units and input units in the Multi Layer Perceptron.
-                                   # e.g ratio == 4 means there are four times more hidden units than input units.
+                                   # e.g. ratio == 4 means there are four times more hidden units than input units.
 }
 

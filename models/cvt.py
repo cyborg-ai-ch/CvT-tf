@@ -1,4 +1,3 @@
-# from tensorflow_addons.optimizers import AdamW
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import LayerNormalization, Dense
 from tensorflow.keras.initializers import TruncatedNormal
@@ -6,13 +5,15 @@ from tensorflow.keras.optimizers.schedules import PiecewiseConstantDecay, Cosine
 from tensorflow.keras.optimizers import Adam
 from tensorflow import Variable, squeeze, reshape, reduce_mean, GradientTape, one_hot, math, reduce_max
 from numpy import isnan
+from tensorflow_addons.optimizers import AdamW
+
 from .cvtBlocks import VisionTransformerStage
 
 
 class ConvolutionalVisionTransformer(Model):
 
     def __init__(self,
-                 num_classes=1000,
+                 num_classes=100,
                  act_layer="gelu",
                  norm_layer=LayerNormalization,
                  spec=None,
@@ -55,12 +56,12 @@ class ConvolutionalVisionTransformer(Model):
         self.head = Dense(num_classes, kernel_initializer=TruncatedNormal(stddev=0.02), activation="softmax")
 
         self.step = Variable(0.0, trainable=False)
-        # schedule = PiecewiseConstantDecay([50, 150, 360], [1.0, 5e-2, 1e-3, 1e-4])
-        learning_rate = CosineDecay(learning_rate, 5000, learning_rate/5.0)
-        # lr = lambda: learning_rate * schedule(self.step)
-        # wd = lambda: learning_rate / 2.0 * schedule(self.step)
-        # self._cvt_optimizer = AdamW(learning_rate=lr, weight_decay=wd)
-        self._cvt_optimizer = Adam(learning_rate)
+        schedule = PiecewiseConstantDecay([5000, 10000, 25000], [5e-1, 5e-2, 5e-3, 5e-4])
+        # learning_rate = CosineDecay(learning_rate, 5000, learning_rate/5.0)
+        lr = learning_rate * schedule(self.step)
+        wd = lambda: learning_rate / 2.0 * schedule(self.step)
+        self._cvt_optimizer = AdamW(learning_rate=lr, weight_decay=wd)
+        # self._cvt_optimizer = Adam(learning_rate)
         self.num_classes = num_classes
 
     def call_features(self, x, training=False, mask=None):
@@ -69,10 +70,11 @@ class ConvolutionalVisionTransformer(Model):
             x, cls_tokens = self.stages[i](x, training=training, mask=mask)
 
         if cls_token is not None:
+            # cls_token.shape == 'b c'
             x = self.norm(cls_token)
             x = squeeze(x)
         else:
-            # 'b c h w -> b (h w) c'
+            # x.shape == 'b (h w) c'
             x = self.norm(x)
             x = reshape(x, (x.shape[0], -1, x.shape[-1]))
             # 'b (h w) c' -> 'b c'

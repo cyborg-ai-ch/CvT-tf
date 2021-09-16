@@ -1,13 +1,18 @@
-from numpy import stack, ndarray, asarray, arange
-from numpy.random import randint, shuffle
+from numpy import stack, ndarray, asarray, arange, squeeze
+from numpy.random import randint, shuffle, seed as np_seed
 from tensorflow.keras.datasets import cifar100
 from tensorflow_datasets import load
 from tensorflow.python import data
+from tensorflow import one_hot, constant, float32
 from PIL import Image
-from typing import Tuple, Iterable, Generator, List
+from .Augmentor import ImageAugmentor
+from typing import Tuple, Iterable, Generator, List, Union
 
 
 class DataLoader:
+
+    def __init__(self):
+        np_seed(1)
 
     def load_images(self):
         raise NotImplementedError
@@ -16,6 +21,9 @@ class DataLoader:
         raise NotImplementedError
 
     def batch_generator(self, batch_size=128, split="train") -> Generator[Iterable[Tuple[ndarray]], None, None]:
+        raise NotImplementedError
+
+    def validation_set(self, size=128):
         raise NotImplementedError
 
     @property
@@ -30,9 +38,11 @@ class DataLoader:
 class DataLoaderImageNet(DataLoader):
 
     def __init__(self):
+        super().__init__()
         self.image_net = {}
         self.image_net["train"], image_net_info = load("ImagenetV2", with_info=True)
         self.image_net["test"], image_net_info = load("ImagenetV2", split="test", with_info=True)
+        self._validation_set = None
 
     def load_images(self, batch_size=125) -> data.Dataset:
         x, y = self._load_images(split="train")
@@ -81,6 +91,12 @@ class DataLoaderImageNet(DataLoader):
         for window in generator(self.image_net[split]):
             yield self._numpyfy(window)
 
+    def validation_set(self, size=128):
+        if self._validation_set is None or len(self.validation_set[0]) != size:
+            test_x, test_y = self._load_images(split="test")
+            self._validation_set = test_x[:size], test_y[:size]
+        return self._validation_set
+
     @property
     def image_size(self) -> List[int]:
         return [224, 224, 3]
@@ -92,8 +108,12 @@ class DataLoaderImageNet(DataLoader):
 
 class DataLoaderCifar(DataLoader):
 
-    def __init__(self):
+    def __init__(self, image_size: Union[None, List[int]] = None):
+        super().__init__()
         (self.x, self.y), (self.x_test, self.y_test) = cifar100.load_data()
+        self._image_size = image_size or [32, 32, 3]
+        self._validation_set = None
+        self.augmentor = ImageAugmentor(image_size=self._image_size)
 
     def load_images(self, split="train"):
         if split == "train":
@@ -108,6 +128,7 @@ class DataLoaderCifar(DataLoader):
 
     def get_random_test_image(self, split="test") -> Tuple[ndarray]:
         [x, y] = [self.x_test, self.y_test] if split == "test" else [self.x, self.y]
+        x = self.augmentor.resize(x).numpy()
         index = randint(0, len(x))
         return x[index]/255.0, y[index]
 
@@ -118,11 +139,20 @@ class DataLoaderCifar(DataLoader):
         ds = self.load_images(split=split)
         ds = ds.batch(batch_size)
         for batch in ds:
-            yield batch
+            x, y = batch
+            x = self.augmentor(x*1)
+            yield x, y
+
+    def validation_set(self, size=128):
+        if self._validation_set is None or len(self._validation_set[0]) != size:
+            x = self.augmentor.resize(constant(self.x_test[:size]/255.0, dtype=float32))
+            y = one_hot(squeeze(self.y_test[:size]), self.num_classes, dtype=float32)
+            self._validation_set = (x, y)
+        return self._validation_set
 
     @property
     def image_size(self) -> List[int]:
-        return [32, 32, 3]
+        return self._image_size
 
     @property
     def num_classes(self):
