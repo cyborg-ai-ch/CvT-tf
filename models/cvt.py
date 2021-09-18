@@ -92,16 +92,26 @@ class ConvolutionalVisionTransformer(Model):
     def get_config(self):
         raise NotImplementedError
 
-    def train_step(self, data):
+    def train_step(self, data, validation_data=None):
         x, y = data
+
         with GradientTape() as tape:
             x = self(x, training=True)
             loss = self.cvt_loss(x, one_hot(squeeze(y), self.num_classes))
+
         if not isnan(loss.numpy()):
             grad = tape.gradient(loss, self.trainable_weights)
             self._cvt_optimizer.apply_gradients(zip(grad, self.trainable_weights))
+
         self.step.assign_add(1.0)
-        return {"loss": loss.numpy()}
+
+        if validation_data is not None:
+            x_val, y_val = validation_data
+            x_val = self(x_val, training=False)
+            val_loss = self.cvt_loss(x_val, one_hot(squeeze(y_val), self.num_classes))
+            return {"loss": float(loss.numpy()), "val_loss": float(val_loss.numpy())}
+
+        return {"loss": float(loss.numpy())}
 
     @staticmethod
     def cvt_loss(y, y_true):

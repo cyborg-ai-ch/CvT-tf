@@ -17,7 +17,7 @@ class DataLoader:
     def load_images(self):
         raise NotImplementedError
 
-    def get_random_test_images(self, number_of_images, split="test") -> Iterable[Tuple[ndarray]]:
+    def get_random_test_images(self, number_of_images, split="test", seed=1) -> Iterable[Tuple[ndarray]]:
         raise NotImplementedError
 
     def batch_generator(self, batch_size=128, split="train") -> Generator[Iterable[Tuple[ndarray]], None, None]:
@@ -132,21 +132,52 @@ class DataLoaderCifar(DataLoader):
         index = randint(0, len(x))
         return x[index]/255.0, y[index]
 
-    def get_random_test_images(self, number_of_images, split="test") -> Iterable[Tuple[ndarray]]:
-        return [self.get_random_test_image(split=split) for i in range(number_of_images)]
+    def get_random_test_images(self, number_of_images, split="test", seed=1) -> Iterable[Tuple[ndarray]]:
+        [x, y] = [self.x_test, self.y_test] if split == "test" else [self.x, self.y]
+        np_seed(seed)
+        indices = randint(0, len(x), number_of_images)
+        x = x[indices]
+        y = y[indices]
+        x = self.augmentor.resize(x)
+        return x/255.0, y
 
     def batch_generator(self, batch_size=128, split="train") -> Generator[Iterable[Tuple[ndarray]], None, None]:
         ds = self.load_images(split=split)
         ds = ds.batch(batch_size)
+        test_augmentation = False
+        first_batch = False
+
+        if test_augmentation:
+            import matplotlib.pyplot as plt
+            fig: plt.Figure = plt.figure()
+            ax_real: plt.Axes = fig.add_subplot(121)
+            ax_real.set_title("Real Image")
+            ax_augmented: plt.Axes = fig.add_subplot(122)
+            ax_augmented.set_title("Augmented Image")
+
         for batch in ds:
             x, y = batch
-            x = self.augmentor(x*1)
-            yield x, y
+            x_augmented = self.augmentor(x*1)
+
+            if first_batch and test_augmentation:
+                first_batch = False
+                ax_real.imshow(x.numpy()[0])
+                ax_augmented.imshow(x_augmented.numpy()[0])
+                fig.show()
+                fig.canvas.draw()
+                done = False
+                while not done:
+                    try:
+                        fig.canvas.flush_events()
+                    except Exception:
+                        done = True
+
+            yield x_augmented, y
 
     def validation_set(self, size=128):
         if self._validation_set is None or len(self._validation_set[0]) != size:
             x = self.augmentor.resize(constant(self.x_test[:size]/255.0, dtype=float32))
-            y = one_hot(squeeze(self.y_test[:size]), self.num_classes, dtype=float32)
+            y = self.y_test[:size]
             self._validation_set = (x, y)
         return self._validation_set
 
