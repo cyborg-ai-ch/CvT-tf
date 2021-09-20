@@ -17,7 +17,7 @@ class DataLoader:
     def load_images(self):
         raise NotImplementedError
 
-    def get_random_test_images(self, number_of_images, split="test", seed=1) -> Iterable[Tuple[ndarray]]:
+    def get_random_test_images(self, number_of_images, split="test", seed: Union[None, int] = 1) -> Iterable[Tuple[ndarray]]:
         raise NotImplementedError
 
     def batch_generator(self, batch_size=128, split="train") -> Generator[Iterable[Tuple[ndarray]], None, None]:

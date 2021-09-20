@@ -1,5 +1,5 @@
 from tensorflow.keras.models import Model
-from tensorflow import stack
+from os import urandom
 from numpy import squeeze, argmax, zeros, isnan, array, stack as np_stack, count_nonzero
 import matplotlib.pyplot as plt
 from models.cvt import ConvolutionalVisionTransformer
@@ -59,7 +59,7 @@ def train(loader: DataLoader, batch_size=512, epochs=10, spec=SPEC, start_weight
     return model, plot.figure
 
 
-def test(model: Model, loader: DataLoader, number_of_images=1000, split="test", seed=1):
+def test(model: Model, loader: DataLoader, number_of_images=1000, split="test", seed=None):
     test_images = number_of_images
     x, y_true = loader.get_random_test_images(test_images, split=split, seed=seed)
     y = model(x).numpy()
@@ -94,5 +94,5 @@ if __name__ == '__main__':
                               learning_rate=1e-3)
         save_weights(model, "weights")
         wait_on_plot([figure])
-    figure = test(model, loader, number_of_images=1000, split="test", seed=12)
+    figure = test(model, loader, number_of_images=1000, split="test", seed=None)
     wait_on_plot([figure])
