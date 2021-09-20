@@ -10,8 +10,9 @@ def save_weights(model: Union[Model, Layer], name="weights"):
     save("weights/{}.npy".format(name), [weight.numpy() for weight in weights], allow_pickle=True)
 
 
-def load_weights(model: Union[Model, Layer], name="weights", input_shape=(1, 512, 512)):
+def load_weights(model: Union[Model, Layer], name="weights", input_shape=(1, 512, 512), load_head=True):
     weights = load("weights/{}.npy".format(name), allow_pickle=True)
     model(zeros(input_shape))
     for index, weight in enumerate(weights):
-        tf.compat.v1.assign(model.weights[index], weight)
+        if index < len(weights) - 1 or load_head:
+            tf.compat.v1.assign(model.weights[index], weight)

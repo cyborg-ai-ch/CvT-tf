@@ -1,8 +1,6 @@
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import LayerNormalization, Dense
 from tensorflow.keras.initializers import TruncatedNormal
-from tensorflow.keras.optimizers.schedules import PiecewiseConstantDecay, CosineDecay
-from tensorflow.keras.optimizers import Adam
 from tensorflow import Variable, squeeze, reshape, reduce_mean, GradientTape, one_hot, math, reduce_max
 from numpy import isnan
 from tensorflow_addons.optimizers import AdamW
@@ -17,7 +15,8 @@ class ConvolutionalVisionTransformer(Model):
                  act_layer="gelu",
                  norm_layer=LayerNormalization,
                  spec=None,
-                 learning_rate=5e-4):
+                 learning_rate=5e-4,
+                 learning_rate_schedule=None):
         super(ConvolutionalVisionTransformer, self).__init__()
         self.num_classes = num_classes
 
@@ -56,12 +55,10 @@ class ConvolutionalVisionTransformer(Model):
         self.head = Dense(num_classes, kernel_initializer=TruncatedNormal(stddev=0.02), activation="softmax")
 
         self.step = Variable(0.0, trainable=False)
-        schedule = PiecewiseConstantDecay([5000, 10000, 25000], [5e-1, 5e-2, 5e-3, 5e-4])
-        # learning_rate = CosineDecay(learning_rate, 5000, learning_rate/5.0)
-        lr = learning_rate * schedule(self.step)
-        wd = lambda: learning_rate / 2.0 * schedule(self.step)
+        lr = learning_rate * learning_rate_schedule(self.step) if learning_rate_schedule is not None else learning_rate
+        wd = lambda: learning_rate / 2.0 * learning_rate_schedule(self.step) \
+            if learning_rate_schedule is not None else learning_rate / 2.0
         self._cvt_optimizer = AdamW(learning_rate=lr, weight_decay=wd)
-        # self._cvt_optimizer = Adam(learning_rate)
         self.num_classes = num_classes
 
     def call_features(self, x, training=False, mask=None):

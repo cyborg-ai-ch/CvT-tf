@@ -21,10 +21,14 @@ class LossPlot:
 
     def update(self, loss: float, val_loss: float):
         total_max = max([loss, val_loss])
-        x = range(len(self._y_loss) + 1)
         self._total_max = max([self._total_max, total_max])
         self._y_loss.append(loss)
         self._y_val_loss.append(val_loss)
+        self._fig.canvas.draw()
+        self._fig.canvas.flush_events()
+
+    def draw(self):
+        x = range(len(self._y_loss))
         self._plot_loss.set_xdata(x)
         self._plot_loss.set_ydata(self._y_loss)
         self._plot_val_loss.set_xdata(x)
@@ -47,3 +51,11 @@ class LossPlot:
     @property
     def figure(self):
         return self._fig
+
+    @property
+    def loss(self):
+        return self._y_loss
+
+    @property
+    def val_loss(self):
+        return self._y_val_loss

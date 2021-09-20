@@ -1,6 +1,8 @@
-from numpy import stack, ndarray, asarray, arange, squeeze
+from numpy import stack, ndarray, asarray, arange
 from numpy.random import randint, shuffle, seed as np_seed
 from tensorflow.keras.datasets import cifar100
+from os import urandom
+from struct import unpack
 from tensorflow_datasets import load
 from tensorflow.python import data
 from tensorflow import one_hot, constant, float32
@@ -132,8 +134,9 @@ class DataLoaderCifar(DataLoader):
         index = randint(0, len(x))
         return x[index]/255.0, y[index]
 
-    def get_random_test_images(self, number_of_images, split="test", seed=1) -> Iterable[Tuple[ndarray]]:
+    def get_random_test_images(self, number_of_images, split="test", seed=None) -> Iterable[Tuple[ndarray]]:
         [x, y] = [self.x_test, self.y_test] if split == "test" else [self.x, self.y]
+        seed = seed or abs(unpack("i", urandom(4))[0]//2) - 1
         np_seed(seed)
         indices = randint(0, len(x), number_of_images)
         x = x[indices]
@@ -174,8 +177,10 @@ class DataLoaderCifar(DataLoader):
 
             yield x_augmented, y
 
-    def validation_set(self, size=128):
-        if self._validation_set is None or len(self._validation_set[0]) != size:
+    def validation_set(self, size=128, random=True):
+        if random:
+            return self.get_random_test_images(size, split="test")
+        elif self._validation_set is None or len(self._validation_set[0]) != size:
             x = self.augmentor.resize(constant(self.x_test[:size]/255.0, dtype=float32))
             y = self.y_test[:size]
             self._validation_set = (x, y)

@@ -1,7 +1,8 @@
 from tensorflow.keras.layers import Layer, LayerNormalization, Dropout
-from tensorflow import reshape, concat, zeros, split, Variable, float32
+from tensorflow import reshape, concat, zeros, split, Variable, float32, Tensor
 from numpy import linspace as np_linspace
 from .cvtLayers import Attention, DropPatch, Mlp, ConvEmbed
+from typing import List
 
 
 class Block(Layer):
@@ -127,7 +128,7 @@ class VisionTransformerStage(Layer):
             self.cls = Variable(initial_value=[1.0 for i in range(embed_dim)],
                                 dtype=float32, shape=(embed_dim,), trainable=True)
 
-    def call(self, x, mask=None, training=True):
+    def call(self, x: Tensor, mask=None, training=True) -> List[Tensor]:
         x = self.patch_embed(x)
         b, h, w, c = x.shape
         x = reshape(x, (b, h * w, c))
@@ -148,4 +149,4 @@ class VisionTransformerStage(Layer):
         # 'b (h w) c -> b h w c'
         x = reshape(x, (b, h, w, x.shape[-1]))
 
-        return x, cls_tokens
+        return [x, cls_tokens]

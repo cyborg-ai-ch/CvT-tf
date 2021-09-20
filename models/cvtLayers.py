@@ -1,17 +1,40 @@
-from tensorflow.keras.layers import Layer, Dense, Conv2D, Dropout, MultiHeadAttention, AveragePooling2D, \
-    BatchNormalization
+from tensorflow.keras.layers import Layer, Dense, Conv2D, Dropout, MultiHeadAttention, BatchNormalization
 from tensorflow.keras.models import Sequential
 from tensorflow import Tensor, divide, concat, random, split, reshape, transpose, float32
 from typing import List, Union, Iterable
 
 
 class Rearrange(Layer):
-    '''
-     @Brief: Permutate and reshape a tensor.
-    inputs:
-    permutation: a list containing the permutated indices of the output eg. for the permutation [1, 2, 3] -> [2, 1, 3] th
+    """
+    Permute and reshape a tensor.
 
-    '''
+    Examples:
+        >>> t = zeros((2, 3, 4))
+        >>> r = Rearrange([2, 1, 0])
+        >>> print(r(t).shape)
+        (4, 3, 2)
+
+        >>> t = zeros((2, 3, 4))
+        >>> r = Rearrange([0, 2 , 1], ["0", ["2", "1"]])
+        >>> print(r(t).shape)
+        (2, 12)
+
+        >>> t = zeros((2, 3, 4))
+        >>> r = Rearrange([0, 2 , 1], ["0", -1])
+        >>> print(r(t).shape)
+        (2, 12)
+
+        >>> t = zeros((2, 3, 4))
+        >>> r = Rearrange([0, 2 , 1], None)
+        >>> print(r(t).shape)
+        (2, 4, 3)
+
+        >>> t = zeros((2, 3, 4))
+        >>> r = Rearrange([0, 2 , 1], ["0", 2, 6])
+        >>> print(r(t).shape)
+        (2, 2, 6)
+
+    """
 
     def __init__(self, permutation: Union[List[int], None], new_shape: List[Union[int, str]] = None):
         super(Rearrange, self).__init__()
@@ -48,6 +71,9 @@ class Rearrange(Layer):
 
 
 class DropPatch(Layer):
+    """
+    Drop a patch with probability drop_probability.
+    """
 
     def __init__(self, drop_probability=0.0):
         super(DropPatch, self).__init__()
@@ -95,7 +121,22 @@ class ConvEmbed(Layer):
 
 
 class Attention(Layer):
+    """
 
+    Args:
+        dim_in: the embedding dimension (number of filters) of the Convolutional Projection.
+        dim_out: the output dimension of the Attention.
+        num_heads: the number of the Heads for the keras MultiHeadAttention.
+        proj_drop: The dropout after the application of the attention.
+        kernel_size: the kernel size of the Convolutional Projection.
+        stride_kv: Key, and Value stride of the Convolutional Projection.
+        stride_q: Query stride of the Convolutional Projection.
+        padding_kv: Padding of the Convolutional Projection for the Key and the Value. Either "same" or "valid".
+        padding_q: Padding of the Convolutional Projection for the Query. Either "same" or "valid".
+        attention_bias: True if the MultiHeadAttention should use a bias.
+        with_cls_token: True if the Input has a Class Token stacked. (Only useful for the last block.)
+
+    """
     def __init__(self,
                  dim_in,
                  dim_out,
@@ -103,10 +144,10 @@ class Attention(Layer):
                  proj_drop=0.,
                  kernel_size=3,
                  stride_kv=1,
+                 stride_q=1,
                  padding_kv="same",
                  padding_q="same",
                  attention_bias=True,
-                 stride_q=1,
                  with_cls_token=False):
         super().__init__()
         self.stride_kv = stride_kv
@@ -160,12 +201,22 @@ class Attention(Layer):
 
 
 class Mlp(Layer):
+    """
+    Multi Layer Pereceptron.
+
+    Args:
+      in_features: Embedding Dimension.
+      out_features: Output Dimension, equal to in_features if empty.
+      act_layer: Activation Function of the hidden Layer.
+      drop: Dropout percentage.
+
+    """
 
     def __init__(self,
                  in_features,
                  hidden_features=None,
                  out_features=None,
-                 act_layer="relu",
+                 act_layer="gelu",
                  drop=0.0):
         super(Mlp, self).__init__()
         out_features = out_features or in_features
