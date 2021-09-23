@@ -29,7 +29,7 @@ SPEC = {
     "DROP_PATCH_RATE": [0.01, 0.0, 0.05],  # Probability to drop a patch.
 
     # ATTENTION OPTIONS
-    "NUM_HEADS": [1, 4, 6],  # Number of heads of the multi head attention.
+    "NUM_HEADS": [1, 4, 6],  # Number of heas of the multi head attention.
 
     "QKV_BIAS": [True, True, True],  # True if the attention should use a bias.
 
