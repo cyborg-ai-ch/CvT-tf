@@ -49,8 +49,8 @@ The Model can be configured with the hyper-parameters in config/config.py.
 To Start the training without changing Datasets, Learning Rate or the Learning Rate Schedule just start main.py:
 
 ```shell script
-python main.py
-```
+python main.py 
+``` 
 
 If you want to change the the above values open main.py with an Editor and change the parameters of the train function at the bottom of the file. 
 
@@ -61,7 +61,7 @@ model, figure = train(cifar_loader,
                       start_weights="",
                       learning_rate=1e-3,
                       learning_rate_schedule=schedule)
-```
+``` 
 
 ##### Training Parameters: 
 
