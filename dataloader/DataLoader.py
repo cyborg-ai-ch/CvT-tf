@@ -3,12 +3,14 @@ from numpy.random import randint, shuffle, seed as np_seed
 from tensorflow.keras.datasets import cifar100
 from os import urandom
 from struct import unpack
-from tensorflow_datasets import load
+from tensorflow_datasets import load, ImageFolder
+from tensorflow_datasets.image_classification import imagenet2012_multilabel
 from tensorflow.python import data
 from tensorflow import one_hot, constant, float32
+from itertools import cycle
 from PIL import Image
 from .Augmentor import ImageAugmentor
-from typing import Tuple, Iterable, Generator, List, Union
+from typing import Tuple, Iterable, Generator, List, Union, Callable
 
 
 class DataLoader:
@@ -19,7 +21,10 @@ class DataLoader:
     def load_images(self):
         raise NotImplementedError
 
-    def get_random_test_images(self, number_of_images, split="test", seed: Union[None, int] = 1) -> Iterable[Tuple[ndarray]]:
+    def get_random_test_images(self,
+                               number_of_images,
+                               split="test",
+                               seed: Union[None, int] = 1) -> Iterable[Tuple[ndarray]]:
         raise NotImplementedError
 
     def batch_generator(self, batch_size=128, split="train") -> Generator[Iterable[Tuple[ndarray]], None, None]:
@@ -39,65 +44,41 @@ class DataLoader:
 
 class DataLoaderImageNet(DataLoader):
 
-    def __init__(self):
+    def __init__(self, image_size=(72, 72, 3)):
         super().__init__()
-        self.image_net = {}
-        self.image_net["train"], image_net_info = load("ImagenetV2", with_info=True)
-        self.image_net["test"], image_net_info = load("ImagenetV2", split="test", with_info=True)
-        self._validation_set = None
+        self.builder = ImageFolder("~/data/imagenet/ILSVRC/Data/CLS-LOC/")
+        self._image_size = list(image_size)
+        self.augmentor = ImageAugmentor(image_size=self._image_size)
+        self._set = {}
+        self._set_gen = {}
 
-    def load_images(self, batch_size=125) -> data.Dataset:
-        x, y = self._load_images(split="train")
-        x = data.Dataset.from_tensor_slices(x)
-        y = data.Dataset.from_tensor_slices(y)
-        return data.Dataset.zip((x, y)).batch(batch_size)
-
-    def get_random_test_image(self) -> Tuple[ndarray, ndarray]:
-        test_x, test_y = self._load_images(split="test")
-        index = randint(0, len(test_x))
-        return test_x[index], test_y[index]
-
-    def _load_images(self, split="train"):
-        return self._numpyfy(self.image_net[split], 1000)
-
-    @staticmethod
-    def _numpyfy(dataset, max_size=-1):
-        x = []
-        y = []
-        for element in dataset.take(max_size):
-            i = element["image"].numpy()
-            i = Image.fromarray(i)
-            i = i.resize((224, 224))
-            x.append(asarray(i))
-            y.append(element["label"].numpy())
-        x = stack(x)
-        y = stack(y)
-        return x / 255., y
-
-    def get_random_test_images(self, number_of_images, split="test") -> Iterable[Tuple[ndarray]]:
-        for i in range(number_of_images):
-            yield self.get_random_test_image()
+    def get_random_test_images(self, number_of_images, split="test", seed=1) -> Iterable[Tuple[ndarray]]:
+        return self._set_next(split, number_of_images, self.augmentor.resize)
 
     def batch_generator(self, batch_size=128, split="train") -> Generator[Iterable[Tuple[ndarray]], None, None]:
-        size = self.image_net[split].cardinality().numpy()
-
-        def generator(ds):
-            index = 0
-            while index < size:
-                ds.skip(index)
-                index += batch_size
-                if index >= batch_size:
-                    ds.shuffle(2*batch_size)
-                yield ds.take(batch_size)
-
-        for window in generator(self.image_net[split]):
-            yield self._numpyfy(window)
+        if split not in self._set or split not in self._set_gen:
+            self._set_init(split, batch_size, self.augmentor)
+        return self._set_gen[split]
 
     def validation_set(self, size=128):
-        if self._validation_set is None or len(self.validation_set[0]) != size:
-            test_x, test_y = self._load_images(split="test")
-            self._validation_set = test_x[:size], test_y[:size]
-        return self._validation_set
+        return self._set_next("val", size, self.augmentor.resize)
+
+    def _set_next(self, split: str, batch_size: int, augmentor: Callable):
+        if split not in self._set or split not in self._set_gen:
+            self._set_init(split, batch_size, augmentor)
+        return self._set_gen[split].__next__()
+
+    def _set_init(self, split: str, batch_size: int, augmentor: Callable):
+        self._set[split] = self.builder.as_dataset(split="split",
+                                                   shuffle_files=True,
+                                                   batch_size=batch_size,
+                                                   as_supervised=True)
+        self._set_gen[split] = cycle(self._set_generator(self._set[split], augmentor))
+
+    @staticmethod
+    def _set_generator(batched_set: data.Dataset, augmentor: Callable):
+        for x, y in batched_set:
+            yield augmentor(x / 255.0), y
 
     @property
     def image_size(self) -> List[int]:
