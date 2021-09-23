@@ -44,9 +44,71 @@ For the installation of the optional CUDA drivers please refer to the [tensorflo
 
 The Model can be configured with the hyper-parameters in config/config.py.
 
-#### training
+#### Training
+
+To Start the training without changing Datasets, Learning Rate or the Learning Rate Schedule just start main.py:
+
+```shell script
+python main.py
+```
+
+If you want to change the the above values open main.py with an Editor and change the parameters of the train function at the bottom of the file. 
+
+```python
+model, figure = train(cifar_loader,
+                      epochs=300,
+                      batch_size=512,
+                      start_weights="",
+                      learning_rate=1e-3,
+                      learning_rate_schedule=schedule)
+```
+
+##### Training Parameters: 
+
+ - cifar_loader  
+   > The loader of the Dataset (Consult dataloader/DataLoader.py) for more information.
+ 
+ - epchos
+   > The Number of Epochs to train for.
+
+ - batch_size 
+   > The Number of Images per batch.
+ 
+ - start_weights 
+   > The file name in the weights folder containing pre trained weights to load before starting the training.
+ 
+ - learning_rate
+   > The learning rate.
+ 
+ - learning_rate_schedule
+   > The learning rate schedule (e. g. a cosine decay)
+ 
+Note That the training can be stopped at any time by Focusing on the plot and holding the key 'q'.
+
+Pressing 'h' or 'r' while focusing on the plot will resize it to fit the Data.
 
 
+#### Testing
 
+To test your Model call the train function found in main.py
 
+```python
+figure = test(model, cifar_loader, number_of_images=5000, split="test", seed=None)
+```
 
+##### Test Parameters
+
+ - model
+   > your trained Model.
+ 
+ - cifar_loader
+   > Dataset Loader same as in train.
+ 
+ - number_of_images
+   > Determines how many images to use for the test.
+ 
+ - split
+   > "test" or "train" the Dataset split to take images from. (usually test : )
+
+ - seed
+   > The Random Seed by which to choose images. If the Value is None os.urandom is used instead.
