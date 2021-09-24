@@ -24,7 +24,7 @@ tbd
 
 Before installing the dependencies you should consider using a virtual environment. It can be created by: 
 
-``` shell
+```shell
 # activate the environment by running the generated activate
 # script in <folder name> for your os. E.g. for windows activate.bat
 python3 -m venv <folder name>
@@ -33,7 +33,7 @@ python3 -m venv <folder name>
 The necessary packages are listed in requirements.txt.
 They can be installed using:
 
-``` shell
+```shell
 pip install -r requirements.txt
 ```
 
@@ -45,15 +45,15 @@ The Model can be configured with the hyper-parameters in config/config.py.
 
 #### Training
 
-To Start the training without changing Datasets, Learning Rate or the Learning Rate Schedule just start main.py:
+To start the training without changing Datasets, Learning Rate or the Learning Rate Schedule just run main.py:
 
-``` shell script
+```shell
 python main.py 
 ``` 
 
-If you want to change the the above values open main.py with an Editor and change the parameters of the train function at the bottom of the file. 
+If you want to change these values, open main.py with an editor and change the parameters of the train function at the bottom of the file. 
 
-``` python
+```python
 model, figure = train(cifar_loader,
                       epochs=300,
                       batch_size=512,
@@ -91,7 +91,7 @@ Pressing 'h' or 'r' while focusing on the plot will resize it to fit the Data.
 
 To test your Model call the train function found in main.py
 
-``` python
+```python
 figure = test(model, cifar_loader, number_of_images=5000, split="test", seed=None)
 ```
 
