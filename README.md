@@ -46,13 +46,13 @@ The Model can be configured with the hyper-parameters in config/config.py.
 
 #### Training
 
-To Start the training without changing Datasets, Learning Rate or the Learning Rate Schedule just start main.py:
+To start the training without changing Datasets, Learning Rate or the Learning Rate Schedule just run main.py:
 
 ```shell
 python main.py 
 ``` 
 
-If you want to change these values open main.py with an Editor and change the parameters of the train function at the bottom of the file. 
+If you want to change these values, open main.py with an editor and change the parameters of the train function at the bottom of the file. 
 
 ```python
 model, figure = train(cifar_loader,
