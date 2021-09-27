@@ -1,4 +1,5 @@
-from tensorflow.keras.layers import Layer, Dense, Conv2D, Dropout, MultiHeadAttention, BatchNormalization
+from tensorflow.keras.layers import Layer, Dense, Conv2D, Dropout, MultiHeadAttention, BatchNormalization, \
+    DepthwiseConv2D
 from tensorflow.keras.models import Sequential
 from tensorflow import Tensor, divide, concat, random, split, reshape, transpose, float32
 from typing import List, Union, Iterable
@@ -157,17 +158,17 @@ class Attention(Layer):
         self.scale = dim_out ** -0.5
         self.with_cls_token = with_cls_token
 
-        self.conv_proj_q = self._build_projection(dim_in, kernel_size, stride_q, padding_q)
-        self.conv_proj_k = self._build_projection(dim_in, kernel_size, stride_kv, padding_kv)
-        self.conv_proj_v = self._build_projection(dim_in, kernel_size, stride_kv, padding_kv)
+        self.conv_proj_q = self._build_projection(kernel_size, stride_q, padding_q)
+        self.conv_proj_k = self._build_projection(kernel_size, stride_kv, padding_kv)
+        self.conv_proj_v = self._build_projection(kernel_size, stride_kv, padding_kv)
 
         self.attention = MultiHeadAttention(self.num_heads, dim_out, use_bias=attention_bias)
         self.proj_drop = Dropout(proj_drop)
 
     @staticmethod
-    def _build_projection(filters, kernel_size, stride, padding):
+    def _build_projection(kernel_size, stride, padding):
         proj = Sequential([
-            Conv2D(filters, kernel_size, padding=padding, strides=stride, use_bias=False),
+            DepthwiseConv2D(kernel_size, padding=padding, strides=stride, use_bias=False),
             BatchNormalization(),
             #  'b h w c -> b (h w) c '
             Rearrange(None, ["0", ["1", "2"], "3"])
