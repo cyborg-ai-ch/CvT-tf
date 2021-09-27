@@ -18,7 +18,7 @@ Validation set: Contains 10000 images (100 objects per a category)
 ### Results 
 tbd
 
-### Usage 
+### Usage
 
 #### Installation
 
