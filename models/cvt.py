@@ -12,14 +12,17 @@ class ConvolutionalVisionTransformer(Model):
 
     def __init__(self,
                  num_classes=100,
-                 act_layer="gelu",
-                 norm_layer=LayerNormalization,
                  spec=None,
                  learning_rate=5e-4,
                  learning_rate_schedule=None):
+        """
+        :param num_classes: The Number of outputs for the classifier Head.
+        :param spec: The configuration as in config/config.py
+        :param learning_rate: Start learning rate.
+        :param learning_rate_schedule: The learning rate decay or None
+        """
         super(ConvolutionalVisionTransformer, self).__init__()
         self.num_classes = num_classes
-
         self.num_stages = spec['NUM_STAGES']
         self.stages = []
         for i in range(self.num_stages):
@@ -42,13 +45,13 @@ class ConvolutionalVisionTransformer(Model):
             }
 
             stage = VisionTransformerStage(
-                act_layer=act_layer,
-                norm_layer=norm_layer,
+                act_layer="gelu",
+                norm_layer=LayerNormalization,
                 **kwargs
             )
             self.stages.append(stage)
 
-        self.norm = norm_layer(axis=-1)
+        self.norm = LayerNormalization(axis=-1)
         self.cls_token = spec['CLS_TOKEN']
 
         # Classifier head
@@ -61,7 +64,7 @@ class ConvolutionalVisionTransformer(Model):
         self._cvt_optimizer = AdamW(learning_rate=lr, weight_decay=wd)
         self.num_classes = num_classes
 
-    def call_features(self, x, training=False, mask=None):
+    def _call_features(self, x, training=False, mask=None):
         cls_token = None
         for i in range(self.num_stages):
             x, cls_tokens = self.stages[i](x, training=training, mask=mask)
@@ -79,17 +82,40 @@ class ConvolutionalVisionTransformer(Model):
         return x
 
     def call(self, x, training=False, mask=None):
-        x = self.call_features(x, training=training, mask=mask)
+        """
+
+        :param x: A Tensor containing Images.
+        :param training: True if the model is to be trained. (mainly activates drop out layers.)
+        :param mask: Has no effect (just to match the parent function call).
+        :return:
+        """
+        x = self._call_features(x, training=training, mask=mask)
         x = self.head(x)
         return x
 
     def from_config(self, config, custom_objects=None):
+        """
+        to be implemented.
+        :param config: the serialized configuration of the model, gained by calling get_config.
+        :param custom_objects: always None ?
+        :return: a ConvolutionalVisionTransformer model instance.
+        """
         raise NotImplementedError
 
     def get_config(self):
+        """
+        to be implemented.
+        :return: the serialization of the model configuration.
+        """
         raise NotImplementedError
 
     def train_step(self, data, validation_data=None):
+        """
+        Tain a single step over a Batch
+        :param data: the batch consisting of a tuple (images, labels).
+        :param validation_data: A validation set or None.
+        :return: A Dictionary containing the loss, and the val_loss if validation_data is not None.
+        """
         x, y = data
 
         with GradientTape() as tape:

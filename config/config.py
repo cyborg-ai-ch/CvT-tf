@@ -9,9 +9,9 @@ SPEC = {
 
 
     #  EMBEDDING OPTIONS
-    "PATCH_SIZE": [7, 3, 3],  # Kernel size of the embedding convolution.
+    "PATCH_SIZE": [6, 3, 3],  # Kernel size of the embedding convolution.
 
-    "PATCH_STRIDE": [4, 2, 2],  # Stride of the embedding convolution.
+    "PATCH_STRIDE": [3, 2, 2],  # Stride of the embedding convolution.
                                 # (rule of thumb stride == kernel_size // 2 + kernel_size%2)
 
     "PATCH_PADDING": ["valid", "same", "same"],  # Padding of the embedding convolution.
@@ -22,14 +22,14 @@ SPEC = {
 
 
     # STAGE OPTIONS
-    "DEPTH": [1, 2, 5],  # Number of 'Transformer blocks' per Stage.
+    "DEPTH": [1, 2, 6],  # Number of 'Transformer blocks' per Stage.
 
-    "DROP_RATE": [0.01, 0.0, 0.0],  # Probability to drop a 'pixel'.
+    "DROP_RATE": [0.0, 0.0, 0.0],  # Probability to drop a 'pixel'.
 
-    "DROP_PATCH_RATE": [0.01, 0.0, 0.05],  # Probability to drop a patch.
+    "DROP_PATCH_RATE": [0.0, 0.0, 0.0],  # Probability to drop a patch.
 
     # ATTENTION OPTIONS
-    "NUM_HEADS": [1, 4, 6],  # Number of heas of the multi head attention.
+    "NUM_HEADS": [1, 3, 6],  # Number of heads of the multi head attention.
 
     "QKV_BIAS": [True, True, True],  # True if the attention should use a bias.
 

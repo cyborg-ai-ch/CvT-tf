@@ -8,7 +8,7 @@ from dataloader.DataLoader import DataLoader, DataLoaderCifar
 from utils.LossPlot import LossPlot
 from utils.Weights import load_weights, save_weights
 from typing import List
-from config.config_t3 import SPEC
+from config.config import SPEC
 
 
 def wait_on_plot(figures: List[plt.Figure]):
@@ -19,12 +19,10 @@ def wait_on_plot(figures: List[plt.Figure]):
                 figure.canvas.flush_events()
         except Exception:
             figure_closed = True
-            plt.close()
-            for figure in figures:
-                try:
-                    figure.canvas.flush_events()
-                except Exception:
-                    continue
+            try:
+                plt.close()
+            except Exception:
+                pass
             plt.ioff()
             plt.ion()
 
@@ -36,6 +34,7 @@ def train(loader: DataLoader,
           start_weights=None,
           learning_rate=5e-4,
           learning_rate_schedule=None):
+
     cvt_model = ConvolutionalVisionTransformer(spec=spec,
                                                learning_rate=learning_rate,
                                                learning_rate_schedule=learning_rate_schedule,
@@ -63,6 +62,7 @@ def train(loader: DataLoader,
             print(f"{[f'{key} {value:.3E}' for key, value in losses.items()]}"
                   f", batch no. {index - epoch_start}", end="\r")
             plot.update(losses["loss"], losses["val_loss"])
+            plot.draw()
             index += 1
             if stop[0] or isnan(losses["loss"]):
                 if isnan(losses["loss"]):
@@ -72,7 +72,6 @@ def train(loader: DataLoader,
               f"val loss {mean(plot.val_loss[epoch_start:index]):.3E} :: "
               f"time {process_time() - start_time} :: "
               f"batches {index - epoch_start}")
-        plot.draw()
         if stop[0]:
             break
     return cvt_model, plot.figure
@@ -96,24 +95,21 @@ def test(model: Model, loader: DataLoader, number_of_images=1000, split="test", 
 if __name__ == '__main__':
     plt.switch_backend("TkAgg")
     from matplotlib import rcsetup
-    from os.path import isfile
 
     plt.ion()
 
     cifar_loader = DataLoaderCifar(image_size=[72, 72, 3])
     rcsetup.validate_backend("TkAgg")
-    if isfile("weights/weights.npy"):
-        model = ConvolutionalVisionTransformer(spec=SPEC)
-        load_weights(model, "weights", input_shape=[1] + cifar_loader.image_size)
-    else:
-        schedule = PiecewiseConstantDecay([5000, 10000, 25000], [5e-1, 5e-2, 5e-3, 5e-4])
-        model, figure = train(cifar_loader,
-                              epochs=300,
-                              batch_size=512,
-                              start_weights="",
-                              learning_rate=1e-3,
-                              learning_rate_schedule=schedule)
-        save_weights(model, "weights")
-        wait_on_plot([figure])
+
+    schedule = PiecewiseConstantDecay([5000, 10000, 25000], [5e-1, 5e-2, 5e-3, 5e-4])
+    model, figure = train(cifar_loader,
+                          epochs=300,
+                          batch_size=512,
+                          start_weights="",
+                          learning_rate=1e-3,
+                          learning_rate_schedule=schedule)
+    save_weights(model, "weights")
+    wait_on_plot([figure])
+
     figure = test(model, cifar_loader, number_of_images=5000, split="test", seed=None)
     wait_on_plot([figure])

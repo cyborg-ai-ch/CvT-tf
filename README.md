@@ -4,7 +4,7 @@ Base on GitHub code: [https://github.com/microsoft/CvT]
 Paper: [CvT: Introducing Convolutions to Vision Transformers](https://arxiv.org/abs/2103.15808)
 
 ### Our Implementation Schema 
-![](cvt_schema_v2.png "CvT Schema")
+![](cvtSchema.png "CvT Schema")
 
 ### Implementation testing 
 Pretrained on ILSVRC2012 [ImageNet-1k](https://www.google.com)  
