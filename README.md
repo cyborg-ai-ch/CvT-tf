@@ -1,14 +1,17 @@
 # CvT Tensorflow Implementation 
-We implemented the Convolutions to Vision Transformers (CvT) into Tensorflow Version > 2.5.   
-Base on GitHub code: [https://github.com/microsoft/CvT]   
+Dear friends: We implemented the Convolutions to Vision Transformers (CvT) into Tensorflow Version > 2.5. 
+The goal was to better understand the concept and architecture. Please feel free to use and improve the model.  
+CvT original code GitHub: [https://github.com/microsoft/CvT]   
 Paper: [CvT: Introducing Convolutions to Vision Transformers](https://arxiv.org/abs/2103.15808)
 
 ### Our Implementation Schema 
-![](cvtSchema.png "CvT Schema")
+![](cvtSchema_v3.png "CvT Schema")
 
-### Implementation testing 
-Pretrained on ILSVRC2012 [ImageNet-1k](https://www.google.com)  
-Contains 1.3 million training images and 1000 objects categories.     
+### Testing implementation
+
+[comment]: <> (Pretrained on ILSVRC2012 [ImageNet-1k]&#40;https://www.google.com&#41;  )
+
+[comment]: <> (Contains 1.3 million training images and 1000 objects categories.     )
 
 Trained on [CIFAR100](https://www.cs.toronto.edu/~kriz/cifar.html)  
 Data set: 60000 images and 100 object categories  
@@ -16,7 +19,113 @@ Training set: Contains 50000 images (500 objects per a category)
 Validation set: Contains 10000 images (100 objects per a category) 
 
 ### Results 
-tbd
+CIFAR100 was trained from scratch.  
+We use augmentation with an image resizing and get state-of-the-art results.
+ <table>
+  <tr>
+    <td>Model</td>
+    <td>Resolution</td>
+    <td>Param</td>
+    <td>Top-1</td>
+    <td>Hardware</td>
+  </tr>
+  <tr>
+    <td>CvT-1</td>
+    <td>72x72</td>
+    <td>3.5M</td>
+    <td>59.0</td>
+    <td>2x RTX 2080</td>
+  </tr>
+</table>
+
+Please see option details in config.py
+<table>
+  <tr>
+    <td>Options</td>
+    <td>Stage 1</td>
+    <td>Stage 2</td>
+    <td>Stage 3</td>
+    <td>Remark</td>
+  </tr>
+  <tr>
+    <td>Model</td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+  </tr>
+   <tr>
+    <td>NUM_STAGES</td>
+    <td>-</td>
+    <td>-</td>
+    <td>-</td>
+    <td>3</td>
+  </tr>
+  <tr>
+    <td>CLS_TOKEN</td>
+    <td>-</td>
+    <td>-</td>
+    <td>-</td>
+    <td>TRUE</td>
+  </tr>
+  <tr>
+    <td>EMBEDDING</td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>PATCH_SIZE</td>
+    <td>6</td>
+    <td>3</td>
+    <td>3</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>PATCH_STRIDE</td>
+    <td>3</td>
+    <td>2</td>
+    <td>2</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>DIM_EMBED</td>
+    <td>32</td>
+    <td>64</td>
+    <td>128</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>STAGE</td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>DEPTH</td>
+    <td>1</td>
+    <td>2</td>
+    <td>6</td>
+    <td>No dropout</td>
+  </tr>
+  <tr>
+    <td>ATTENTION</td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>NUM_HEADS</td>
+    <td>1</td>
+    <td>3</td>
+    <td>6</td>
+    <td></td>
+  </tr>
+</table>
+
 
 ### Usage
 
